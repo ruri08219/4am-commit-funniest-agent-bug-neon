@@ -9,6 +9,10 @@ v1: atomic write (temp file in /output, then os.replace), UTF-8
 byte-length guard (1-200 bytes) in addition to the character-length
 guard, and a single-line guard, since the message has to stay one
 line, plus a stdout summary of the written size.
+
+v2: control-character guard — reject ENTRY containing any control
+character (ord < 0x20 or == 0x7f), since a 4am commit message must be
+clean text; control chars would fail the gate or corrupt the log.
 """
 
 import os
@@ -31,6 +35,9 @@ def main():
         return 1
     if "\n" in ENTRY:
         print("entry must be a single line", file=sys.stderr)
+        return 1
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7f for ch in ENTRY):
+        print("entry contains a control character", file=sys.stderr)
         return 1
     entry_bytes = ENTRY.encode("utf-8")
     if not 1 <= len(entry_bytes) <= MAX_BYTES:
